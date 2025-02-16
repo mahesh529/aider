@@ -462,13 +462,22 @@ class RepoMap:
         else:
             pers_args = dict()
 
+        # Validate personalization vector before PageRank calculation
+        if personalization and not any(personalization.values()):
+            if self.verbose:
+                self.io.tool_warning("PageRank: All personalization values are zero")
+            return []
+
         try:
             ranked = nx.pagerank(G, weight="weight", **pers_args)
         except ZeroDivisionError:
-            # Issue #1536
+            if self.verbose:
+                self.io.tool_warning("PageRank: Failed with personalization, trying without")
             try:
                 ranked = nx.pagerank(G, weight="weight")
             except ZeroDivisionError:
+                if self.verbose:
+                    self.io.tool_warning("PageRank: Failed without personalization")
                 return []
 
         # distribute the rank from each source node, across all of its out edges
