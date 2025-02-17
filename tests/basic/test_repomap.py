@@ -18,6 +18,26 @@ class TestRepoMap(unittest.TestCase):
     def setUp(self):
         self.GPT35 = Model("gpt-3.5-turbo")
 
+    def test_pagerank_fallback(self):
+        with IgnorantTemporaryDirectory() as temp_dir:
+            # Create a file that will trigger personalized PageRank failure
+            test_file = "test.py"
+            with open(os.path.join(temp_dir, test_file), "w") as f:
+                f.write("def isolated_function(): pass\n")
+
+            io = InputOutput()
+            repo_map = RepoMap(main_model=self.GPT35, root=temp_dir, io=io)
+            other_files = [os.path.join(temp_dir, test_file)]
+
+            # Should not return empty list due to fallback
+            result = repo_map.get_repo_map([], other_files)
+            self.assertIsNotNone(result)
+            self.assertNotEqual(result, "")
+            self.assertIn("test.py", result)
+
+            # close the open cache files, so Windows won't error
+            del repo_map
+
     def test_get_repo_map(self):
         # Create a temporary directory with sample files for testing
         test_files = [
