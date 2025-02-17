@@ -273,6 +273,50 @@ print(my_function(3, 4))
             # close the open cache files, so Windows won't error
             del repo_map
 
+    def test_pagerank_fallback(self):
+        """Test the PageRank fallback mechanism when ZeroDivisionError occurs."""
+        with GitTemporaryDirectory() as temp_dir:
+            # Create a simple graph that will trigger ZeroDivisionError
+            file1_content = "def function1():\n    pass\n"
+            file2_content = "from file1 import function1\n"
+
+            with open(os.path.join(temp_dir, "file1.py"), "w") as f:
+                f.write(file1_content)
+            with open(os.path.join(temp_dir, "file2.py"), "w") as f:
+                f.write(file2_content)
+
+            io = InputOutput()
+            repo_map = RepoMap(main_model=self.GPT35, root=temp_dir, io=io)
+            chat_files = [os.path.join(temp_dir, "file1.py")]
+            other_files = [os.path.join(temp_dir, "file2.py")]
+
+            # Mock networkx.pagerank to simulate different scenarios
+            import networkx as nx
+            original_pagerank = nx.pagerank
+
+            def mock_pagerank_all_fail(*args, **kwargs):
+                raise ZeroDivisionError
+
+            def mock_pagerank_personalized_fails(*args, **kwargs):
+                if "personalization" in kwargs:
+                    raise ZeroDivisionError
+                return {"file1.py": 0.5, "file2.py": 0.5}
+
+            try:
+                # Test case 1: Both attempts fail
+                nx.pagerank = mock_pagerank_all_fail
+                result = repo_map.get_repo_map(chat_files, other_files)
+                self.assertEqual(result, "")  # Empty string returned when no tags
+
+                # Test case 2: Only personalized attempt fails
+                nx.pagerank = mock_pagerank_personalized_fails
+                result = repo_map.get_repo_map(chat_files, other_files)
+                self.assertIn("file2.py", result)  # Non-personalized PageRank succeeds
+
+            finally:
+                nx.pagerank = original_pagerank
+                del repo_map
+
 
 class TestRepoMapTypescript(unittest.TestCase):
     def setUp(self):
