@@ -465,10 +465,12 @@ class RepoMap:
         try:
             ranked = nx.pagerank(G, weight="weight", **pers_args)
         except ZeroDivisionError:
-            # Issue #1536
+            # Try again without personalization
+            self.io.tool_output("Falling back to non-personalized PageRank")
             try:
                 ranked = nx.pagerank(G, weight="weight")
             except ZeroDivisionError:
+                # If still failing, return empty list as before
                 return []
 
         # distribute the rank from each source node, across all of its out edges
