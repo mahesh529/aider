@@ -303,6 +303,14 @@ def find_common_root(abs_fnames):
 
 
 def format_tokens(count):
+    """Format token count with k suffix for thousands.
+    
+    Args:
+        count (int): Number of tokens to format
+        
+    Returns:
+        str: Formatted string with k suffix for thousands
+    """
     if count < 1000:
         return f"{count}"
     elif count < 10000:
