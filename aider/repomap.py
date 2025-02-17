@@ -463,12 +463,14 @@ class RepoMap:
             pers_args = dict()
 
         try:
+            # First attempt: PageRank with personalization
             ranked = nx.pagerank(G, weight="weight", **pers_args)
         except ZeroDivisionError:
-            # Issue #1536
             try:
+                # Second attempt: PageRank without personalization
                 ranked = nx.pagerank(G, weight="weight")
             except ZeroDivisionError:
+                # Both attempts failed, return empty list
                 return []
 
         # distribute the rank from each source node, across all of its out edges
